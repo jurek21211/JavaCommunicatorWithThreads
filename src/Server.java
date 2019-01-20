@@ -1,5 +1,7 @@
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class Server {
@@ -9,6 +11,7 @@ public class Server {
         Socket sock = null;
         BufferedReader keyboard = null;
         PrintWriter output = null;
+        ArrayList activeThreads = new ArrayList();
 
 
         while(true){
@@ -19,7 +22,8 @@ public class Server {
             keyboard = new BufferedReader(new InputStreamReader(System.in));
             output = new PrintWriter(sock.getOutputStream());
 
-            new ClientHandler(sock, keyboard, output).start();
+            ClientHandler clientHandlerThread = new ClientHandler(sock, keyboard, output);
+            clientHandlerThread.start();
         }
     }
 }

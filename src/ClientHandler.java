@@ -26,7 +26,6 @@ public class ClientHandler extends Thread {
         while (true) {
             try {
                 this.outputString.println("What do you want to do? ");
-                received = inputString.readLine();
 
                 if (received.equalsIgnoreCase("exit")) {
                     System.out.println("Client " + this.socket + "sends exit...");
