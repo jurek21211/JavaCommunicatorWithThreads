@@ -1,41 +1,25 @@
-import java.io.*;
-import java.net.*;
-import java.util.ArrayList;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.concurrent.LinkedBlockingQueue;
 
-
-public class Server {
-    private ArrayList<ConnectionToClient> clientList = null;
+public class Client {
+    private ConnectionToServer server = null;
     private LinkedBlockingQueue<Object> messages = null;
-    private ServerSocket serverSocket = null;
+    private Socket socket = null;
 
-    public Server(int port) throws IOException {
-        clientList = new ArrayList<ConnectionToClient>();
+    public Client(String IPAddress, int port) throws IOException {
+        socket = new Socket(IPAddress, port);
         messages = new LinkedBlockingQueue<Object>();
-        serverSocket = new ServerSocket(port);
-
-        Thread acceptConnection = new Thread() {
-            public void run() {
-                while (true) {
-                    try {
-                        Socket s = serverSocket.accept();
-                        clientList.add(new ConnectionToClient(s));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        };
-
-        acceptConnection.setDaemon(true);
-        acceptConnection.start();
+        server = new ConnectionToServer(socket);
 
         Thread messageHandling = new Thread() {
             public void run() {
                 while (true) {
                     try {
                         Object message = messages.take();
-                        System.out.println("Message received " + message);
+                        System.out.println("Message Received " + message);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -45,15 +29,14 @@ public class Server {
 
         messageHandling.setDaemon(true);
         messageHandling.start();
-
     }
 
-    private class ConnectionToClient {
-        ObjectInputStream input;
-        ObjectOutputStream output;
+    private class ConnectionToServer {
+        ObjectInputStream input = null;
+        ObjectOutputStream output = null;
         Socket socket;
 
-        ConnectionToClient(Socket socket) throws IOException {
+        ConnectionToServer(Socket socket) throws IOException {
             this.socket = socket;
             input = new ObjectInputStream(socket.getInputStream());
             output = new ObjectOutputStream(socket.getOutputStream());
@@ -64,11 +47,11 @@ public class Server {
                         try {
                             Object obj = input.readObject();
                             messages.put(obj);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                     }
@@ -79,17 +62,16 @@ public class Server {
             read.start();
         }
 
-        public void write(Object obj) {
-            try{
+        private void write(Object obj) {
+            try {
                 output.writeObject(obj);
-            }catch (IOException e){
+            } catch (IOException e){
                 e.printStackTrace();
             }
         }
+    }
 
-        public void sendToAll(Object message){
-            for(ConnectionToClient client : clientList)
-                client.write(message);
-        }
+    public void send(Object obj){
+        server.write(obj);
     }
 }
