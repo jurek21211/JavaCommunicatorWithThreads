@@ -62,7 +62,7 @@ class Receiver extends Thread {
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Connection terminated");
         }
     }
 

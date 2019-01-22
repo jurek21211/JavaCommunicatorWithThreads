@@ -1,3 +1,4 @@
+import javax.print.attribute.standard.Severity;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -6,7 +7,7 @@ import java.util.List;
 
 public class Server {
     public static List<Socket> clientList = new ArrayList<Socket>();
-    Socket sock = null;
+    public Socket sock = null;
 
     public static void main(String args[]) throws IOException {
         ServerSocket serv = new ServerSocket(80);
@@ -22,25 +23,25 @@ public class Server {
 
 class Sender extends Thread {
     String message = null;
+    String exitOrder = null;
+    Socket sock = null;
+
     PrintWriter output = null;
 
-    Sender(String message) {
+    Sender(String message, String exitOrder) {
         this.message = message;
+        this.exitOrder = exitOrder;
     }
 
     public void run() {
         try {
-
-            for (int i = 0; i < Server.clientList.size(); i++) {
+                for(int i = 0; i < Server.clientList.size(); i++){
                 output = new PrintWriter(Server.clientList.get(i).getOutputStream());
                 output.println(this.message);
                 output.flush();
-                if (message.equalsIgnoreCase("exit"))
-                    output.close();
-
             }
         } catch (IOException e) {
-            e.printStackTrace();
+
         }
     }
 }
@@ -49,7 +50,7 @@ class Sender extends Thread {
 class TaskHandler extends Thread {
     Socket sock = null;
     BufferedReader reader = null;
-    String message = null;
+    String message = null, reply = null;
     Server server = null;
 
 
@@ -69,12 +70,13 @@ class TaskHandler extends Thread {
             while (true) {
                 message = this.reader.readLine();
                 System.out.println("<Sender: " + this.sock.getPort() + "> says: " + message);
-                message = "<Client: " + this.sock.getPort() + "> says: " + message;
-                new Sender(message).start();
+                reply = "<Client: " + this.sock.getPort() + "> says: " + message;
+                new Sender(reply, message).start();
 
                 if (message.equalsIgnoreCase("exit")) {
-                    System.out.println("Connection terminated");
+                    System.out.println("Connection with <" + this.sock.getPort() + "> terminated");
                     this.reader.close();
+                    Server.clientList.remove(this.sock);
                     break;
                 }
 
