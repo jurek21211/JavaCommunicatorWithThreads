@@ -2,9 +2,10 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Server {
-    public static ArrayList<Socket> clientList = new ArrayList<Socket>();
+    public static List<Socket> clientList = new ArrayList<Socket>();
     Socket sock = null;
 
     public static void main(String args[]) throws IOException {
@@ -13,11 +14,10 @@ public class Server {
         while (true) {
             System.out.println("Waiting for connection...");
             Socket sock = serv.accept();
+            new TaskHandler(sock).start();
             clientList.add(sock);
         }
     }
-
-
 }
 
 class Sender extends Thread {
@@ -32,8 +32,12 @@ class Sender extends Thread {
         try {
 
             for (int i = 0; i < Server.clientList.size(); i++) {
-                output = new PrintWriter(clientList.get(i).getOutputStream());
+                output = new PrintWriter(Server.clientList.get(i).getOutputStream());
                 output.println(this.message);
+                output.flush();
+                if (message.equalsIgnoreCase("exit"))
+                    output.close();
+
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -44,7 +48,7 @@ class Sender extends Thread {
 
 class TaskHandler extends Thread {
     Socket sock = null;
-    BufferedReader reader;
+    BufferedReader reader = null;
     String message = null;
     Server server = null;
 
@@ -52,7 +56,7 @@ class TaskHandler extends Thread {
     TaskHandler(Socket clientSocket) {
         try {
             this.sock = clientSocket;
-            this.reader = new BufferedReader(new InputStreamReader(this.sock.getInputStream()));
+            this.reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -63,18 +67,20 @@ class TaskHandler extends Thread {
         try {
 
             while (true) {
+                message = this.reader.readLine();
+                System.out.println("<Sender: " + this.sock.getPort() + "> says: " + message);
+                message = "<Client: " + this.sock.getPort() + "> says: " + message;
+                new Sender(message).start();
+
                 if (message.equalsIgnoreCase("exit")) {
                     System.out.println("Connection terminated");
-                    reader.close();
+                    this.reader.close();
                     break;
-                } else {
-                    message = reader.readLine();
-                    System.out.println("<" + this.sock.getLocalPort() + "> says: " + message);
-                    message = "<" + this.sock.getLocalPort() + "> says: " + message;
-                    new Sender(message).start();
                 }
 
             }
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }
